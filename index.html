@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shardul — Portfolio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;500;600;700;800&family=Epilogue:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ============================================================
+       ROOT VARIABLES & RESET
+    ============================================================ */
+    :root {
+      --black:     #080808;
+      --white:     #f0ede8;
+      --dim:       #5a5753;
+      --accent:    #c8b89a;
+      --line:      rgba(240,237,232,0.08);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--black);
+      color: var(--white);
+      font-family: 'Epilogue', sans-serif;
+      font-weight: 300;
+      overflow-x: hidden;
+      cursor: default;
+    }
+
+    /* Grain overlay — adds tactile texture */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+      opacity: 0.028;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ============================================================
+       SECTION 1 — LOADING SCREEN
+    ============================================================ */
+    #loading-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--black);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 36px;
+      z-index: 1000;
+      transition: opacity 0.7s ease, visibility 0.7s ease;
+    }
+
+    #loading-screen.hidden {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    /* Name — letters rendered individually */
+    #loading-name {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(52px, 10vw, 100px);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      display: flex;
+      gap: 0.04em;
+    }
+
+    #loading-name .letter {
+      display: inline-block;
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity 0.38s ease, transform 0.38s ease;
+    }
+
+    #loading-name .letter.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Progress bar */
+    #loading-bar-wrap {
+      width: clamp(180px, 28vw, 320px);
+      height: 1px;
+      background: rgba(240,237,232,0.1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    #loading-bar-fill {
+      position: absolute;
+      top: 0; left: 0;
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      transition: width 0.06s linear;
+    }
+
+    /* ============================================================
+       SECTION 2 — IDENTITY SLIDE PHASE
+    ============================================================ */
+    #identity-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--black);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 900;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.5s ease, visibility 0.5s ease;
+    }
+
+    #identity-screen.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    #identity-screen.hidden {
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    #identity-word {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(52px, 10vw, 110px);
+      letter-spacing: 0.04em;
+      color: var(--white);
+      text-align: center;
+      padding: 0 5vw;
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.45s cubic-bezier(0.22,1,0.36,1), transform 0.45s cubic-bezier(0.22,1,0.36,1);
+    }
+
+    #identity-word.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    #identity-word.exit {
+      opacity: 0;
+      transform: translateY(-20px);
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+
+    /* Small index indicator */
+    #identity-index {
+      position: fixed;
+      bottom: 48px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 901;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    #identity-index.active { opacity: 1; }
+
+    .dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--dim);
+      transition: background 0.3s ease;
+    }
+    .dot.on { background: var(--accent); }
+
+    /* ============================================================
+       MAIN SITE
+    ============================================================ */
+    #main-site {
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.9s ease, visibility 0.9s ease;
+    }
+
+    #main-site.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* ============================================================
+       HEADER / NAVBAR
+    ============================================================ */
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 500;
+      padding: 28px 6vw;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.4s ease, background 0.4s ease, padding 0.3s ease;
+    }
+
+    header.scrolled {
+      background: rgba(8,8,8,0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-color: var(--line);
+      padding: 18px 6vw;
+    }
+
+    .nav-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 18px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--white);
+      text-decoration: none;
+      transition: color 0.25s ease;
+    }
+    .nav-logo:hover { color: var(--accent); }
+
+    nav { display: flex; gap: 36px; align-items: center; }
+
+    nav a {
+      font-family: 'Syne', sans-serif;
+      font-weight: 500;
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--dim);
+      text-decoration: none;
+      position: relative;
+      transition: color 0.25s ease;
+    }
+
+    nav a::after {
+      content: '';
+      position: absolute;
+      bottom: -3px; left: 0;
+      width: 0%; height: 1px;
+      background: var(--accent);
+      transition: width 0.3s ease;
+    }
+
+    nav a:hover { color: var(--white); }
+    nav a:hover::after { width: 100%; }
+
+    /* ============================================================
+       HERO SECTION
+    ============================================================ */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 120px 6vw 80px;
+      text-align: center;
+      position: relative;
+    }
+
+    /* Subtle radial glow behind hero */
+    #hero::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 70vw;
+      height: 70vw;
+      background: radial-gradient(circle, rgba(200,184,154,0.04) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-tagline {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(28px, 5.5vw, 68px);
+      letter-spacing: 0.06em;
+      line-height: 1.15;
+      color: var(--white);
+      max-width: 1100px;
+      opacity: 0;
+      transform: translateY(30px);
+      animation: fadeUp 0.9s cubic-bezier(0.22,1,0.36,1) 0.3s forwards;
+    }
+
+    .hero-tagline .sep {
+      color: var(--accent);
+      margin: 0 0.18em;
+      font-size: 0.7em;
+      vertical-align: middle;
+    }
+
+    .hero-scroll-hint {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      opacity: 0;
+      animation: fadeIn 0.8s ease 1.4s forwards;
+    }
+
+    .hero-scroll-hint span {
+      font-family: 'Syne', sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+
+    .scroll-line {
+      width: 1px;
+      height: 40px;
+      background: linear-gradient(to bottom, var(--accent), transparent);
+      animation: scrollPulse 2s ease infinite;
+    }
+
+    @keyframes scrollPulse {
+      0%, 100% { opacity: 0.4; transform: scaleY(1); }
+      50% { opacity: 1; transform: scaleY(1.15); }
+    }
+
+    /* ============================================================
+       ABOUT SECTION
+    ============================================================ */
+    #about {
+      padding: 120px 6vw;
+      max-width: 860px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .section-label {
+      font-family: 'Syne', sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 52px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--line);
+      max-width: 80px;
+    }
+
+    .about-body {
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .about-body p {
+      font-size: clamp(16px, 1.8vw, 19px);
+      line-height: 1.85;
+      color: rgba(240,237,232,0.72);
+      font-weight: 300;
+    }
+
+    .about-body p:first-child {
+      color: var(--white);
+      font-weight: 400;
+      font-size: clamp(17px, 2vw, 21px);
+    }
+
+    /* Animate paragraphs on scroll */
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ============================================================
+       DIVIDER
+    ============================================================ */
+    .section-divider {
+      width: 100%;
+      max-width: 860px;
+      margin: 0 auto;
+      height: 1px;
+      background: var(--line);
+    }
+
+    /* ============================================================
+       CONTACT SECTION
+    ============================================================ */
+    #contact {
+      padding: 120px 6vw 160px;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    .contact-heading {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(44px, 7vw, 88px);
+      letter-spacing: 0.04em;
+      line-height: 1;
+      color: var(--white);
+      margin-bottom: 60px;
+    }
+
+    .contact-heading em {
+      color: var(--accent);
+      font-style: normal;
+    }
+
+    .contact-links {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .contact-link {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px 0;
+      border-top: 1px solid var(--line);
+      text-decoration: none;
+      group: true;
+      transition: padding-left 0.3s ease;
+    }
+
+    .contact-link:last-child { border-bottom: 1px solid var(--line); }
+
+    .contact-link:hover { padding-left: 8px; }
+
+    .cl-label {
+      font-family: 'Syne', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--dim);
+      transition: color 0.25s ease;
+    }
+
+    .cl-value {
+      font-family: 'Epilogue', sans-serif;
+      font-size: clamp(15px, 1.6vw, 18px);
+      font-weight: 300;
+      color: rgba(240,237,232,0.55);
+      transition: color 0.25s ease;
+    }
+
+    .cl-arrow {
+      font-size: 18px;
+      color: var(--dim);
+      transform: rotate(-45deg);
+      transition: color 0.25s ease, transform 0.25s ease;
+    }
+
+    .contact-link:hover .cl-label { color: var(--accent); }
+    .contact-link:hover .cl-value { color: var(--white); }
+    .contact-link:hover .cl-arrow { color: var(--accent); transform: rotate(-45deg) translate(3px,-3px); }
+
+    /* ============================================================
+       FOOTER
+    ============================================================ */
+    footer {
+      padding: 32px 6vw;
+      border-top: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    footer p {
+      font-family: 'Syne', sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+
+    /* ============================================================
+       KEYFRAMES
+    ============================================================ */
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+
+    /* ============================================================
+       RESPONSIVE
+    ============================================================ */
+    @media (max-width: 600px) {
+      nav { gap: 20px; }
+      .contact-link { flex-wrap: wrap; gap: 4px; }
+      .cl-arrow { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============================================================
+       LOADING SCREEN
+  ============================================================ -->
+  <div id="loading-screen">
+    <div id="loading-name">
+      <!-- Letters injected by JS -->
+    </div>
+    <div id="loading-bar-wrap">
+      <div id="loading-bar-fill"></div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       IDENTITY SLIDE PHASE
+  ============================================================ -->
+  <div id="identity-screen">
+    <div id="identity-word"></div>
+  </div>
+  <div id="identity-index"></div>
+
+  <!-- ============================================================
+       MAIN SITE
+  ============================================================ -->
+  <div id="main-site">
+
+    <!-- HEADER -->
+    <header id="site-header">
+      <a href="#hero" class="nav-logo">Shardul</a>
+      <nav>
+        <a href="#about">About</a>
+        <a href="#contact">Contact</a>
+      </nav>
+    </header>
+
+    <!-- HERO -->
+    <section id="hero">
+      <h1 class="hero-tagline">
+        Execution Guy
+        <span class="sep">•</span>
+        Logic Brain
+        <span class="sep">•</span>
+        Useful Overthinker
+        <span class="sep">•</span>
+        Midnight Guitarist
+        <span class="sep">•</span>
+        Deep Work <span style="color:var(--accent)">&gt;</span> Noise
+      </h1>
+      <div class="hero-scroll-hint">
+        <span>Scroll</span>
+        <div class="scroll-line"></div>
+      </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section id="about">
+      <div class="section-label">About</div>
+      <div class="about-body">
+        <p class="reveal">
+          I like building things and getting them done—execution matters more than just ideas. I naturally think in logic and patterns, sometimes overthinking, but in a way that helps me break problems down effectively.
+        </p>
+        <p class="reveal">
+          I spend a lot of time in deep focus, avoiding distractions and working in a state where I can think clearly and solve problems with precision. That's where I do my best work—when everything is quiet and I'm fully locked in.
+        </p>
+        <p class="reveal">
+          I focus on understanding systems, improving consistency, and building skills that compound over time.
+        </p>
+        <p class="reveal">
+          Still figuring things out, but consistently building, learning, and improving.
+        </p>
+      </div>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <!-- CONTACT -->
+    <section id="contact">
+      <div class="section-label">Contact</div>
+      <h2 class="contact-heading reveal">
+        Let's<br /><em>Connect.</em>
+      </h2>
+
+      <div class="contact-links">
+        <a href="mailto:your@email.com" class="contact-link reveal">
+          <span class="cl-label">Email</span>
+          <span class="cl-value">your@email.com</span>
+          <span class="cl-arrow">↗</span>
+        </a>
+        <a href="https://github.com/yourusername" target="_blank" rel="noopener" class="contact-link reveal">
+          <span class="cl-label">GitHub</span>
+          <span class="cl-value">github.com/yourusername</span>
+          <span class="cl-arrow">↗</span>
+        </a>
+        <a href="https://linkedin.com/in/yourusername" target="_blank" rel="noopener" class="contact-link reveal">
+          <span class="cl-label">LinkedIn</span>
+          <span class="cl-value">linkedin.com/in/yourusername</span>
+          <span class="cl-arrow">↗</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+      <p>Shardul — Portfolio</p>
+      <p>Built from scratch</p>
+    </footer>
+
+  </div><!-- /main-site -->
+
+
+  <script>
+    /* ============================================================
+       LOADING SCREEN — Letter by letter + progress bar
+    ============================================================ */
+    (function () {
+      const name     = "SHARDUL";
+      const nameEl   = document.getElementById("loading-name");
+      const fill     = document.getElementById("loading-bar-fill");
+      const screen   = document.getElementById("loading-screen");
+
+      // Render letter spans
+      name.split("").forEach((ch, i) => {
+        const span = document.createElement("span");
+        span.classList.add("letter");
+        span.textContent = ch;
+        nameEl.appendChild(span);
+      });
+
+      const letters  = nameEl.querySelectorAll(".letter");
+      const total    = letters.length;
+      const interval = 220;  // ms between each letter
+      const holdAfter = 600; // ms to hold after last letter
+
+      let progress = 0;
+      let lettersDone = 0;
+
+      // Animate letters
+      letters.forEach((letter, i) => {
+        setTimeout(() => {
+          letter.classList.add("visible");
+          lettersDone++;
+        }, i * interval + 200);
+      });
+
+      // Animate progress bar in sync
+      // Total letter time: (total-1)*interval + 200 = last letter appears
+      // We want bar to fill over the same span + holdAfter
+      const barDuration = (total - 1) * interval + 200 + holdAfter;
+      const startTime = performance.now();
+
+      function animateBar(now) {
+        const elapsed = now - startTime;
+        const pct = Math.min((elapsed / barDuration) * 100, 100);
+        fill.style.width = pct + "%";
+        if (pct < 100) {
+          requestAnimationFrame(animateBar);
+        } else {
+          // All done → transition to identity screen
+          setTimeout(startIdentityPhase, 300);
+        }
+      }
+
+      requestAnimationFrame(animateBar);
+
+      function startIdentityPhase() {
+        screen.classList.add("hidden");
+        beginIdentitySequence();
+      }
+    })();
+
+
+    /* ============================================================
+       IDENTITY SLIDE PHASE
+    ============================================================ */
+    function beginIdentitySequence() {
+      const words = [
+        "Execution Guy",
+        "Logic Brain",
+        "Useful Overthinker",
+        "Midnight Guitarist",
+        "Deep Work > Noise"
+      ];
+
+      const wordEl    = document.getElementById("identity-word");
+      const indexEl   = document.getElementById("identity-index");
+      const idScreen  = document.getElementById("identity-screen");
+      const mainSite  = document.getElementById("main-site");
+
+      // Build dots
+      words.forEach((_, i) => {
+        const dot = document.createElement("div");
+        dot.classList.add("dot");
+        indexEl.appendChild(dot);
+      });
+      const dots = indexEl.querySelectorAll(".dot");
+
+      idScreen.classList.add("active");
+      indexEl.classList.add("active");
+
+      let current = 0;
+
+      function showWord(index) {
+        if (index >= words.length) {
+          // Sequence done → reveal main site
+          wordEl.classList.remove("visible");
+          wordEl.classList.add("exit");
+          setTimeout(() => {
+            idScreen.classList.remove("active");
+            idScreen.classList.add("hidden");
+            indexEl.classList.remove("active");
+            mainSite.classList.add("active");
+            initScrollObserver();
+            initNavScroll();
+          }, 450);
+          return;
+        }
+
+        // Update dots
+        dots.forEach((d, i) => d.classList.toggle("on", i === index));
+
+        // Set word & animate in
+        wordEl.classList.remove("visible", "exit");
+        wordEl.textContent = words[index];
+
+        // Force reflow so transition fires
+        void wordEl.offsetWidth;
+        wordEl.classList.add("visible");
+
+        // Hold, then exit
+        const stayDuration = index === words.length - 1 ? 1200 : 1000;
+
+        setTimeout(() => {
+          wordEl.classList.remove("visible");
+          wordEl.classList.add("exit");
+          setTimeout(() => {
+            current++;
+            showWord(current);
+          }, 380);
+        }, stayDuration);
+      }
+
+      // Small delay before first word
+      setTimeout(() => showWord(0), 250);
+    }
+
+
+    /* ============================================================
+       SCROLL OBSERVER — Reveal elements on scroll
+    ============================================================ */
+    function initScrollObserver() {
+      const reveals = document.querySelectorAll(".reveal");
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.15, rootMargin: "0px 0px -40px 0px" });
+
+      reveals.forEach(el => observer.observe(el));
+    }
+
+
+    /* ============================================================
+       NAVBAR — Scroll-triggered style change
+    ============================================================ */
+    function initNavScroll() {
+      const header = document.getElementById("site-header");
+      const onScroll = () => {
+        header.classList.toggle("scrolled", window.scrollY > 60);
+      };
+      window.addEventListener("scroll", onScroll, { passive: true });
+    }
+  </script>
+</body>
+</html>
